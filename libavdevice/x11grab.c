@@ -245,6 +245,11 @@ x11grab_read_header(AVFormatContext *s1)
         }
         x11grab->shminfo.shmaddr = image->data = shmat(x11grab->shminfo.shmid, 0, 0);
         x11grab->shminfo.readOnly = False;
+        if (shmctl(x11grab->shminfo.shmid, IPC_RMID, NULL) == -1) {
+            av_log(s1, AV_LOG_ERROR, "Fatal: Can't mark shared memory for delete!\n");
+            ret = AVERROR(errno);
+            goto out;
+        }
 
         if (!XShmAttach(dpy, &x11grab->shminfo)) {
             av_log(s1, AV_LOG_ERROR, "Fatal: Failed to attach shared memory!\n");
@@ -594,7 +599,6 @@ x11grab_read_close(AVFormatContext *s1)
     if (x11grab->use_shm) {
         XShmDetach(x11grab->dpy, &x11grab->shminfo);
         shmdt(x11grab->shminfo.shmaddr);
-        shmctl(x11grab->shminfo.shmid, IPC_RMID, NULL);
     }
 
     /* Destroy X11 image */
